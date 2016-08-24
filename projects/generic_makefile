@@ -1,0 +1,36 @@
+# pretty much generic.
+# only TARGET and OBJECTS should be set:
+#TARGET := main
+#OBJECTS := main.o
+
+CC := avr-gcc
+CLOCK := 12000000
+DEVICE := attiny85
+UPLOAD := ../../micronucleus/commandline/micronucleus --run
+
+CFLAGS += -Iusbdrv -I. -Wall -Werror -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
+LDFLAGS += -mmcu=$(DEVICE)
+
+.PHONY: all flash clean
+
+all:	${TARGET}.hex ${TARGET}.asm
+
+flash:	${TARGET}.hex
+	$(UPLOAD) main.hex
+
+clean:
+	rm -f *.asm *.hex *.elf *.o */*.o
+
+${TARGET}.elf: ${OBJECTS}
+	$(CC) $(LDFLAGS) $^ -o $@
+
+%.hex: %.elf
+	avr-objcopy -j .text -j .data -O ihex $< $@
+	avr-size $@
+
+%.asm: %.elf
+	avr-objdump -d $< > $@
+
+%.o: %.S
+	$(CC) $(CFLAGS) -x assembler-with-cpp -c -o $@ $<
+

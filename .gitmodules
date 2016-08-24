@@ -1,0 +1,6 @@
+[submodule "v-usb"]
+	path = v-usb
+	url = https://github.com/obdev/v-usb.git
+[submodule "micronucleus"]
+	path = micronucleus
+	url = https://github.com/micronucleus/micronucleus.git

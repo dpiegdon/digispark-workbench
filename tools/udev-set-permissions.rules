@@ -1,0 +1,5 @@
+#
+SUBSYSTEM!="usb", GOTO="embedded_usb_exit"
+ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="0753", MODE="0660", GROUP="usb", SYMLINK+="digispark_%k_%n"
+LABEL="embedded_usb_exit"
+KERNEL=="ttyACM*", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="0753", MODE="0660", GROUP="usb", ENV{ID_MM_DEVICE_IGNORE}="1"
