@@ -4,3 +4,6 @@
 [submodule "micronucleus"]
 	path = micronucleus
 	url = https://github.com/micronucleus/micronucleus.git
+[submodule "obmq"]
+	path = obmq
+	url = https://github.com/dpiegdon/obmq.git
