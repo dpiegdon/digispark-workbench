@@ -154,7 +154,6 @@ static uint8_t keypress_order[] = {
 	0,		KEY_ENTER
 };
 #define KEYPRESS_COUNT (sizeof(keypress_order)/2)
-static int keypress_delay = 0;
 static int keypress_current = 0;
 static char keypress_done = 0;
 void keyboard_set()
@@ -163,12 +162,6 @@ void keyboard_set()
 	// we start writing 'example KEYBOARD\n'
 	if(!led_capslock)
 		return;
-
-	if(keypress_delay > 0) {
-		--keypress_delay;
-		return;
-	}
-	keypress_delay = 5000;
 
 	if(!keypress_done) {
 		reportBuffer.modifier = keypress_order[keypress_current*2];
@@ -206,10 +199,12 @@ int __attribute__((noreturn)) main(void)
 	while(1) {
 		wdt_reset();
 		usbPoll();
-		keyboard_set();
 		if(usbInterruptIsReady()){
 			/* called after every poll of the interrupt endpoint */
 			usbSetInterrupt((void *)&reportBuffer, sizeof(reportBuffer));
+			/* prepare new keyboard output */
+			if(led_capslock)
+				keyboard_set();
 		}
 	}
 }
