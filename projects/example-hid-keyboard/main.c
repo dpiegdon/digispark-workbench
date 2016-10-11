@@ -134,47 +134,83 @@ usbMsgLen_t usbFunctionWrite(uint8_t * data, uchar len)
 	return 1; // 1 byte read
 }
 
-static uint8_t keypress_order[] = {
-	0,		KEY_E,
-	0,		KEY_X,
-	0,		KEY_A,
-	0,		KEY_M,
-	0,		KEY_P,
-	0,		KEY_L,
-	0,		KEY_E,
-	0,		KEY_SPACE,
-	MOD_SHIFT_LEFT,	KEY_K,
-	MOD_SHIFT_LEFT,	KEY_E,
-	MOD_SHIFT_LEFT,	KEY_Y,
-	MOD_SHIFT_LEFT,	KEY_B,
-	MOD_SHIFT_LEFT,	KEY_O,
-	MOD_SHIFT_LEFT,	KEY_A,
-	MOD_SHIFT_LEFT,	KEY_R,
-	MOD_SHIFT_LEFT,	KEY_D,
-	0,		KEY_ENTER
-};
-#define KEYPRESS_COUNT (sizeof(keypress_order)/2)
+void char_to_keyboard_buffer(char c)
+{
+	if(c >= 'a' && c <= 'z') {
+		reportBuffer.key1 = c - 'a' + KEY_A; return;
+	} else if(c >= '1' && c <= '9') {
+		reportBuffer.key1 = c - '1' + KEY_1; return;
+	} else switch(c) {
+		case '0': reportBuffer.key1 = KEY_0; return;
+		case ' ': reportBuffer.key1 = KEY_SPACE; return;
+		case '\n': reportBuffer.key1 = KEY_ENTER; return;
+		case '`': reportBuffer.key1 = KEY_GRAVEACCENT; return;
+		case '-': reportBuffer.key1 = KEY_MINUS; return;
+		case '=': reportBuffer.key1 = KEY_EQUAL; return;
+		case '[': reportBuffer.key1 = KEY_BRACKET_LEFT; return;
+		case ']': reportBuffer.key1 = KEY_BRACKET_RIGHT; return;
+		case ';': reportBuffer.key1 = KEY_SEMICOLON; return;
+		case '\'': reportBuffer.key1 = KEY_SINGLEQUOTE; return;
+		case '\\': reportBuffer.key1 = KEY_BACKSLASH; return;
+		case ',': reportBuffer.key1 = KEY_COMMA; return;
+		case '.': reportBuffer.key1 = KEY_PERIOD; return;
+		case '/': reportBuffer.key1 = KEY_SLASH; return;
+	}
+
+	reportBuffer.modifier =	MOD_SHIFT_LEFT;
+
+	if(c >= 'A' && c <= 'Z') {
+		reportBuffer.key1 = c - 'A' + KEY_A; return;
+	} else switch(c) {
+		case '~': reportBuffer.key1 = KEY_GRAVEACCENT; return;
+		case '!': reportBuffer.key1 = KEY_1; return;
+		case '@': reportBuffer.key1 = KEY_2; return;
+		case '#': reportBuffer.key1 = KEY_3; return;
+		case '$': reportBuffer.key1 = KEY_4; return;
+		case '%': reportBuffer.key1 = KEY_5; return;
+		case '^': reportBuffer.key1 = KEY_6; return;
+		case '&': reportBuffer.key1 = KEY_7; return;
+		case '*': reportBuffer.key1 = KEY_8; return;
+		case '(': reportBuffer.key1 = KEY_9; return;
+		case ')': reportBuffer.key1 = KEY_0; return;
+		case '_': reportBuffer.key1 = KEY_MINUS; return;
+		case '+': reportBuffer.key1 = KEY_EQUAL; return;
+		case '{': reportBuffer.key1 = KEY_BRACKET_LEFT; return;
+		case '}': reportBuffer.key1 = KEY_BRACKET_RIGHT; return;
+		case ':': reportBuffer.key1 = KEY_SEMICOLON; return;
+		case '"': reportBuffer.key1 = KEY_SINGLEQUOTE; return;
+		case '|': reportBuffer.key1 = KEY_BACKSLASH; return;
+		case '<': reportBuffer.key1 = KEY_COMMA; return;
+		case '>': reportBuffer.key1 = KEY_PERIOD; return;
+		case '?': reportBuffer.key1 = KEY_SLASH; return;
+	};
+}
+
+static const char * text_to_write =
+			"echo Example Keyboard. 1234.\n";
+
 static int keypress_current = 0;
 static char keypress_done = 0;
-void keyboard_set()
-{
-	// if someone is pressing capslock (and thus the LED is on)
-	// we start writing 'example KEYBOARD\n'
-	if(!led_capslock)
-		return;
+static int keyboard_delay = 0;
 
-	if(!keypress_done) {
-		reportBuffer.modifier = keypress_order[keypress_current*2];
-		reportBuffer.key1 = keypress_order[keypress_current*2+1];
-		keypress_done = 1;
+void keyboard_set(void)
+{
+	if(keyboard_delay) {
+		keyboard_delay -= 1;
 	} else {
-		reportBuffer.modifier = 0;
-		reportBuffer.key1 = 0;
-		keypress_current += 1;
-		if(keypress_current >= KEYPRESS_COUNT)
-			keypress_current = 0;
-		keypress_done = 0;
-	}
+		if(!keypress_done) {
+			char_to_keyboard_buffer(text_to_write[keypress_current]);
+			keypress_done = 1;
+		} else {
+			reportBuffer.modifier = 0;
+			reportBuffer.key1 = 0;
+			keypress_current += 1;
+			if(0 == text_to_write[keypress_current])
+				keypress_current = 0;
+			keypress_done = 0;
+		}
+		keyboard_delay = 3;
+	};
 }
 
 int __attribute__((noreturn)) main(void)
