@@ -23,11 +23,12 @@ DEVICE := attiny85
 UPLOAD := ../../micronucleus/commandline/micronucleus --run
 
 CFLAGS += -Iusbdrv -I.
-CFLAGS += -Wall -Werror -g -gdwarf-4
-CFLAGS += -Os
+CFLAGS += -Wall -Werror -Wshadow -pedantic
+CFLAGS += -Os -g -gdwarf-4
 CFLAGS += -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
 CFLAGS += -Wa,-adhlns=$(<:%=%.lst)
 CFLAGS += -std=c11
+CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums -fstack-usage
 LDFLAGS += -mmcu=$(DEVICE) -Wl,--cref,-Map=$(@:%.elf=%.map)
 
 .PHONY: all flash clean
@@ -38,7 +39,7 @@ flash:	${TARGET}.hex
 	$(UPLOAD) main.hex
 
 clean:
-	rm -f *.asm *.hex *.elf *.bin *.o */*.o *.lst */*.lst *.map
+	rm -f *.asm *.hex *.elf *.bin *.map *.o */*.o *.lst */*.lst *.su */*.su
 
 ${TARGET}.elf: ${OBJECTS}
 	$(CC) $(LDFLAGS) $^ -o $@
