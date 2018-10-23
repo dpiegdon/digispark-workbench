@@ -213,7 +213,7 @@ void keyboard_set(void)
 	};
 }
 
-int __attribute__((noreturn)) main(void)
+int main(void)
 {
 	uchar   i;
 

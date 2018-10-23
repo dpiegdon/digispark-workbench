@@ -99,7 +99,7 @@ usbRequest_t    *rq = (void *)data;
 
 /* ------------------------------------------------------------------------- */
 
-int __attribute__((noreturn)) main(void)
+int main(void)
 {
 uchar   i;
 
