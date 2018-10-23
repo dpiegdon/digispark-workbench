@@ -3,33 +3,55 @@
 #TARGET := main
 #OBJECTS := main.o
 
-CC := avr-gcc
+CROSSCOMPILE ?= avr-
+
+CC := $(CROSSCOMPILE)gcc
+CPP := $(CROSSCOMPILE)gcc
+CXX := $(CROSSCOMPILE)g++
+AS := $(CROSSCOMPILE)as
+AR := $(CROSSCOMPILE)ar
+LD := $(CROSSCOMPILE)gcc
+GDB := $(CROSSCOMPILE)gdb
+NM := $(CROSSCOMPILE)nm
+OBJCOPY := $(CROSSCOMPILE)objcopy
+OBJDUMP := $(CROSSCOMPILE)objdump
+READELF := $(CROSSCOMPILE)readelf
+SIZE := $(CROSSCOMPILE)size
+
 CLOCK := 12000000
 DEVICE := attiny85
 UPLOAD := ../../micronucleus/commandline/micronucleus --run
 
-CFLAGS += -Iusbdrv -I. -Wall -Werror -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
-LDFLAGS += -mmcu=$(DEVICE)
+CFLAGS += -Iusbdrv -I.
+CFLAGS += -Wall -Werror -g -gdwarf-4
+CFLAGS += -Os
+CFLAGS += -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
+CFLAGS += -Wa,-adhlns=$(<:%=%.lst)
+CFLAGS += -std=c11
+LDFLAGS += -mmcu=$(DEVICE) -Wl,--cref,-Map=$(@:%.elf=%.map)
 
 .PHONY: all flash clean
 
-all:	${TARGET}.hex ${TARGET}.asm
+all:	${TARGET}.hex ${TARGET}.asm ${TARGET}.bin
 
 flash:	${TARGET}.hex
 	$(UPLOAD) main.hex
 
 clean:
-	rm -f *.asm *.hex *.elf *.o */*.o
+	rm -f *.asm *.hex *.elf *.bin *.o */*.o *.lst */*.lst *.map
 
 ${TARGET}.elf: ${OBJECTS}
 	$(CC) $(LDFLAGS) $^ -o $@
 
 %.hex: %.elf
-	avr-objcopy -j .text -j .data -O ihex $< $@
-	avr-size $@
+	$(OBJCOPY) -j .text -j .data -O ihex $< $@
+	$(SIZE) $@
 
 %.asm: %.elf
-	avr-objdump -d $< > $@
+	$(OBJDUMP) -d $< > $@
+
+%.bin: %.elf
+	$(OBJCOPY) -j .text -j .data -O binary $< $@
 
 %.o: %.S
 	$(CC) $(CFLAGS) -x assembler-with-cpp -c -o $@ $<
