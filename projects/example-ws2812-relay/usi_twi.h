@@ -21,6 +21,7 @@
 
 enum TwiStates {
 	TWI_IDLE,
+	TWI_PRE_ADDR,
 	TWI_ADDR,
 
 	TWI_MISO_ADDR_ACK,
@@ -117,8 +118,8 @@ ISR(USI_START_vect)
 	}
 
 	sda_in();
-	twi_state = TWI_ADDR;
-	usi_twi_set_usisr(0);
+	twi_state = TWI_PRE_ADDR;
+	usi_twi_set_usisr(15);
 	USICR |= (1<<USIOIE);				// enable counter overflow interrupt.
 
 #ifdef DEBUG
@@ -128,7 +129,7 @@ ISR(USI_START_vect)
 
 ISR(USI_OVF_vect)
 {
-	uint8_t data = USIBR;
+	uint8_t data = USIDR;
 
 #ifdef DEBUG
 	PORTB |= (1<<PIN_DBG2);
@@ -141,19 +142,28 @@ ISR(USI_OVF_vect)
 			USISR |= (1<<USIOIF);
 			break;
 
+		case TWI_PRE_ADDR:
+			// catch clock edge of start condition
+			twi_state = TWI_ADDR;
+			usi_twi_set_usisr(0);
+			USIDR = 0;
+			break;
+
 		case TWI_ADDR:
 			if((data >> 1) == TWI_ADDRESS) {
 				sda_out_low();
 				twi_state = (data&1) ? TWI_MISO_ADDR_ACK : TWI_MOSI_ADDR_ACK;
-				usi_twi_set_usisr(13);
+				usi_twi_set_usisr(14);
 				buffer_index = 0;
-				break;
+			} else {
+				// we are not addressed, go back to idle:
+				twi_state = TWI_IDLE;
+				USICR &= ~(1<<USIOIE);
+				USISR |= (1<<USIOIF);
 			}
-			// else we are not addressed, go back to idle:
-			twi_state = TWI_IDLE;
-			USICR &= ~(1<<USIOIE);
-			USISR |= (1<<USIOIF);
 			break;
+
+		// TODO: implement MISO side.
 
 		case TWI_MOSI_ADDR_ACK:
 			twi_state = TWI_MOSI_BYTE;
@@ -194,6 +204,7 @@ ISR(USI_OVF_vect)
 			PORTB &= ~(1<<PIN_DBG1);
 #endif
 			break;
+
 	}
 
 
