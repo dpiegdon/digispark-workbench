@@ -47,16 +47,6 @@ static inline void sda_out_low(void)
 	DDRB |= (1<<PIN_SDA);
 }
 
-static inline void scl_in(void)
-{
-	DDRB &= ~(1<<PIN_SCK);
-}
-
-static inline void scl_out_low(void)
-{
-	DDRB |= (1<<PIN_SCK);
-}
-
 static inline void usi_twi_set_usisr(uint8_t counter)
 {
 	USISR = (1<<USISIF)
@@ -113,9 +103,9 @@ ISR(USI_START_vect)
 	PORTB |= (1<<PIN_DBG1);
 #endif
 
-	if(TWI_IDLE != twi_state) {
-		// FIXME: handle repeated start condition
-	}
+	/* TODO: optionally handle repeated start condition?
+	if(TWI_IDLE != twi_state)
+	*/
 
 	sda_in();
 	twi_state = TWI_PRE_ADDR;
@@ -181,8 +171,8 @@ ISR(USI_OVF_vect)
 
 		case TWI_MOSI_BYTE_ACK:
 			sda_in();
-			usi_twi_set_usisr(0);
 			if(buffer_index < sizeof(twi_rx_buffer)) {
+				usi_twi_set_usisr(0);
 				twi_state = TWI_MOSI_BYTE;
 			} else {
 #ifdef DEBUG
