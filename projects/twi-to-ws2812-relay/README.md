@@ -15,16 +15,21 @@ stream to the LEDs using the correct timings.
 The TWI transfer must contain a length field at offset 0, that contains the
 lenght of the data coming after the length field. E.g.:
 
-0x03 0x01 0x02 0x03.
+`0x03 0x01 0x02 0x03`
 
 Currently only 84 LEDs are supported, as the length field is only 8 bit long and
 each LED required 3 bytes of payload (G/R/B).
 
-Expected system clock for the ATTiny is 16 MHz, so CKSEL fuses need to be
-programmed to '0001'.
+Expected system clock for the ATTiny is 16 MHz, so `CKSEL` fuses need to be
+programmed to `0001`. If you use a DigiSpark this is already all set for the
+bootloader.
 
-TWI pins have to be PB2 as SCK and PB0 as SDA, so the USI TWI mode can be used.
-The LEDs should be connected to PB1, but that may be changed in ws2812.h .
+TWI pins have to be `PB2` as `SCK` and `PB0` as `SDA`, so the USI TWI mode can
+be used. The LEDs should be connected to `PB1`, but that may be changed in
+`ws2812.h` .
+
+The TWI address of the ATTiny can be configured in `usi_twi.h`. It currently
+defaults to 0x3c.
 
 Authors
 -------

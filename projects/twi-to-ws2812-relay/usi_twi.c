@@ -25,6 +25,9 @@ enum TwiStates {
 
 
 static uint8_t twi_state = TWI_IDLE;
+#if USI_TWI_MAX_TX_LENGTH > 253
+# error TWI buffer is too large, buffer overflow possible!
+#endif
 uint8_t twi_rx_buffer[1 + USI_TWI_MAX_TX_LENGTH];
 uint8_t twi_rx_buffer_index = 0;
 

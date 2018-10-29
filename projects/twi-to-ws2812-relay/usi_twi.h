@@ -27,12 +27,14 @@
 
 //#define USI_TWI_DEBUG
 #ifdef USI_TWI_DEBUG
+// Pins that can be used to analyse TWI data stream parsing.
 # define USI_TWI_PIN_DBG1 PB3
 # define USI_TWI_PIN_DBG2 PB4
 #endif
 
 #define USI_TWI_ADDRESS 0x3c
 
+// the maximum transfer length, EXcluding the length byte in the front.
 #define USI_TWI_MAX_TX_LENGTH (3*84)
 
 #define USI_TWI_PIN_SCK PB2
