@@ -5,8 +5,9 @@
 #include <util/delay.h>
 #include <avr/pgmspace.h>
 
-
 #include "ws2812.h"
+
+//#define DEBUG
 
 /*
  * USI TWI is partially based on mfc_ro7021.c by Axel Gartner,
@@ -39,7 +40,7 @@ enum TwiStates {
 	TWI_MOSI_STOP,
 };
 
-static volatile uint8_t twi_state = TWI_IDLE;
+static uint8_t twi_state = TWI_IDLE;
 
 static inline void sda_in(void)
 {
@@ -98,8 +99,8 @@ void usi_twi_deinit(void)
 	PRR |= (1<<PRUSI);
 }
 
-uint8_t twi_rx_buffer[5*8*3];
-uint8_t buffer_index = 0;
+uint8_t twi_rx_buffer[1 + 3*80];
+uint8_t twi_rx_buffer_index = 0;
 
 ISR(USI_START_vect)
 {
@@ -119,6 +120,12 @@ ISR(USI_START_vect)
 #ifdef DEBUG
 	PORTB &= ~(1<<PIN_DBG1);
 #endif
+}
+
+static inline void usi_twi_rx_complete_callback(const uint8_t * buffer, const uint8_t length)
+{
+	for(int i = 0; i < length; ++i)
+		ws2812_send_single_byte(buffer[i]);
 }
 
 ISR(USI_OVF_vect)
@@ -148,7 +155,7 @@ ISR(USI_OVF_vect)
 				sda_out_low();
 				twi_state = (data&1) ? TWI_MISO_ADDR_ACK : TWI_MOSI_ADDR_ACK;
 				usi_twi_set_usisr(14);
-				buffer_index = 0;
+				twi_rx_buffer_index = 0;
 			} else {
 				// we are not addressed, go back to idle:
 				twi_state = TWI_IDLE;
@@ -157,7 +164,8 @@ ISR(USI_OVF_vect)
 			}
 			break;
 
-		// TODO: implement MISO side.
+		// TODO: implement MISO side?
+		// well we don't really care about this right now.
 
 		case TWI_MOSI_ADDR_ACK:
 			twi_state = TWI_MOSI_BYTE;
@@ -169,13 +177,21 @@ ISR(USI_OVF_vect)
 			sda_out_low();
 			twi_state = TWI_MOSI_BYTE_ACK;
 			usi_twi_set_usisr(14);
-			twi_rx_buffer[buffer_index] = data;
-			++buffer_index;
+			if((0 == twi_rx_buffer_index) && (data > sizeof(twi_rx_buffer)-1)) {
+				// first transmitted byte is the length of
+				// the upcoming transfer. make sure it
+				// fits into the buffer.
+				twi_rx_buffer[0] = sizeof(twi_rx_buffer)-1;
+			} else {
+				twi_rx_buffer[twi_rx_buffer_index] = data;
+			}
+			++twi_rx_buffer_index;
 			break;
 
 		case TWI_MOSI_BYTE_ACK:
 			sda_in();
-			if(buffer_index < sizeof(twi_rx_buffer)) {
+			// first transmitted byte is expected to be the transmit length
+			if((0 == twi_rx_buffer_index) || (twi_rx_buffer_index < twi_rx_buffer[0]+1)) {
 				usi_twi_set_usisr(0);
 				twi_state = TWI_MOSI_BYTE;
 			} else {
@@ -183,15 +199,10 @@ ISR(USI_OVF_vect)
 				PORTB |= (1<<PIN_DBG1);
 				PORTB &= ~(1<<PIN_DBG1);
 #endif
+				usi_twi_rx_complete_callback(twi_rx_buffer+1, twi_rx_buffer[0]);
 				USICR &= ~(1<<USIOIE);
 				USISR |= (1<<USIOIF);
 				twi_state = TWI_IDLE;
-
-				cli();
-				for(uint8_t * p = twi_rx_buffer; p < twi_rx_buffer+sizeof(twi_rx_buffer); ++p)
-					ws2812_send_single_byte(*p);
-				sei();
-
 			}
 #ifdef DEBUG
 			PORTB |= (1<<PIN_DBG1);
@@ -220,8 +231,8 @@ int main(void)
 	sei();
 
 	while(1) {
-		wdt_reset();
-		_delay_ms(250);
+		wdt_reset(); // FIXME: move to USI_START_vect
+		_delay_ms(500); // FIXME: just go into sleep mode?
 	}
 }
 
