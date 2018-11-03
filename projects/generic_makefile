@@ -22,13 +22,14 @@ CLOCK := 12000000
 DEVICE := attiny85
 UPLOAD := ../../micronucleus/commandline/micronucleus --run
 
+STACK_USAGE=-fstack-usage
 CFLAGS += -Iusbdrv -I.
 CFLAGS += -Wall -Werror -Wshadow -pedantic
 CFLAGS += -Os -g -gdwarf-4
 CFLAGS += -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
 CFLAGS += -Wa,-adhlns=$(<:%=%.lst)
 CFLAGS += -std=c11
-CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums -fstack-usage
+CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums $(STACK_USAGE)
 LDFLAGS += -mmcu=$(DEVICE) -Wl,--cref,-Map=$(@:%.elf=%.map)
 
 .PHONY: all flash clean

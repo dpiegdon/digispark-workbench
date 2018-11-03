@@ -7,6 +7,12 @@
 
 #include "usi_twi.h"
 
+#ifdef USR_TWI_NAKED_ISR
+# define USI_TWI_ISR_OPTS ISR_NAKED
+#else
+# define USI_TWI_ISR_OPTS
+#endif
+
 enum TwiStates {
 	TWI_IDLE,
 	TWI_PRE_ADDR,
@@ -31,16 +37,49 @@ static uint8_t twi_state = TWI_IDLE;
 uint8_t twi_rx_buffer[1 + USI_TWI_MAX_TX_LENGTH];
 uint8_t twi_rx_buffer_index = 0;
 
+static inline void timer_init(void)
+{
+	TCCR0A = (1<<WGM01);
+	GTCCR &= ~((1<<TSM) | (1<<PSR0));
+}
 
+static inline void timer_enable(int enable_interrupt)
+{
+#ifdef USI_TWI_DEBUG
+	PORTB |= (1<<USI_TWI_PIN_DBG2);
+#endif
+	TCNT0 = 0;
+	if(enable_interrupt)
+		TIMSK = (TIMSK & ~((1<<OCIE0B) | (1<<TOIE0))) | (1<<OCIE0A);
+	else
+		TIMSK &= ~(1<<OCIE0A);
+	TCCR0B = (1<<CS01) | (1<<CS00);
+}
+
+static inline void timer_disable(void)
+{
+	TCCR0B = 0;
+	TIMSK &= ~(1<<OCIE0A);
+#ifdef USI_TWI_DEBUG
+	PORTB &= ~(1<<USI_TWI_PIN_DBG2);
+#endif
+}
+
+static inline void timer_set_timeout(void)
+{
+	OCR0A = TCNT0 + 1;
+}
 
 static inline void sda_in(void)
 {
 	DDRB &= ~(1<<USI_TWI_PIN_SDA);
+	timer_disable();
 }
 
 static inline void sda_out_low(void)
 {
 	DDRB |= (1<<USI_TWI_PIN_SDA);
+	timer_enable(1);
 }
 
 static inline void usi_twi_set_usisr(uint8_t counter)
@@ -51,9 +90,21 @@ static inline void usi_twi_set_usisr(uint8_t counter)
 	      | counter;
 }
 
+ISR(TIMER0_COMPA_vect, USI_TWI_ISR_OPTS)
+{
+#ifdef USI_TWI_DEBUG
+	PORTB &= ~(1<<USI_TWI_PIN_DBG2);
+	PORTB |= (1<<USI_TWI_PIN_DBG2);
+#endif
+	usi_twi_set_usisr(0);
+	sda_in();
+	USICR &= ~(1<<USIOIE);
+	twi_state = TWI_IDLE;
+}
+
 void usi_twi_init(void)
 {
-	PRR &= ~(1<<PRUSI);				// power on device
+	PRR &= ~((1<<PRUSI)|(1<<PRTIM0));		// power on device
 
 	PORTB &= ~((1<<USI_TWI_PIN_SDA) | (1<<USI_TWI_PIN_SCK));
 							// make sure we don't pull on the bus
@@ -64,6 +115,8 @@ void usi_twi_init(void)
 	      | (1<<USICS1);				// using external pos edge clock.
 
 	usi_twi_set_usisr(0);
+
+	timer_init();
 
 	PORTB = (PORTB & ~(1<<USI_TWI_PIN_SDA)) | (1<<USI_TWI_PIN_SCK);
 							// SCK: out, high
@@ -90,10 +143,10 @@ void usi_twi_deinit(void)
 	USICR = 0;
 	USISR = 0;
 
-	PRR |= (1<<PRUSI);
+	PRR |= (1<<PRUSI)|(1<<PRTIM0);
 }
 
-ISR(USI_START_vect)
+ISR(USI_START_vect, USI_TWI_ISR_OPTS)
 {
 #ifdef USI_TWI_DEBUG
 	PORTB |= (1<<USI_TWI_PIN_DBG1);
@@ -107,18 +160,19 @@ ISR(USI_START_vect)
 	twi_state = TWI_PRE_ADDR;
 	usi_twi_set_usisr(15);
 	USICR |= (1<<USIOIE);				// enable counter overflow interrupt.
+	USISR |= (1<<USISIF);				// make interrupt as handled
 
 #ifdef USI_TWI_DEBUG
 	PORTB &= ~(1<<USI_TWI_PIN_DBG1);
 #endif
 }
 
-ISR(USI_OVF_vect)
+ISR(USI_OVF_vect, USI_TWI_ISR_OPTS)
 {
 	uint8_t data = USIDR;
 
 #ifdef USI_TWI_DEBUG
-	PORTB |= (1<<USI_TWI_PIN_DBG2);
+	PORTB |= (1<<USI_TWI_PIN_DBG1);
 #endif
 
 	switch(twi_state) {
@@ -130,38 +184,49 @@ ISR(USI_OVF_vect)
 
 		case TWI_PRE_ADDR:
 			// catch clock edge of start condition
-			twi_state = TWI_ADDR;
 			usi_twi_set_usisr(0);
+			timer_enable(0);
+			twi_state = TWI_ADDR;
 			USIDR = 0;
+			// lets measure byte length so we can adjust timeout
 			break;
 
 		case TWI_ADDR:
 			if((data >> 1) == USI_TWI_ADDRESS) {
+				timer_set_timeout();
+				usi_twi_set_usisr(14);
 				sda_out_low();
 				twi_state = (data&1) ? TWI_MISO_ADDR_ACK : TWI_MOSI_ADDR_ACK;
-				usi_twi_set_usisr(14);
 				twi_rx_buffer_index = 0;
 			} else {
 				// we are not addressed, go back to idle:
+				timer_disable();
 				twi_state = TWI_IDLE;
 				USICR &= ~(1<<USIOIE);
 				USISR |= (1<<USIOIF);
 			}
 			break;
 
-		// TODO: implement MISO side?
-		// well we don't really care about this right now.
+		// well we don't really care about these right now:
+		// case TWI_MISO_ADDR_ACK:
+		//	TODO
+		// case TWI_MISO_BYTE:
+		//	TODO
+		// case TWI_MISO_BYTE_ACK:
+		//	TODO
+		// case TWI_MISO_STOP:
+		//	TODO
 
 		case TWI_MOSI_ADDR_ACK:
-			twi_state = TWI_MOSI_BYTE;
 			usi_twi_set_usisr(0);
 			sda_in();
+			twi_state = TWI_MOSI_BYTE;
 			break;
 
 		case TWI_MOSI_BYTE:
+			usi_twi_set_usisr(14);
 			sda_out_low();
 			twi_state = TWI_MOSI_BYTE_ACK;
-			usi_twi_set_usisr(14);
 			if((0 == twi_rx_buffer_index) && (data > sizeof(twi_rx_buffer)-1)) {
 				// first transmitted byte is the length of
 				// the upcoming transfer. make sure it
@@ -174,31 +239,23 @@ ISR(USI_OVF_vect)
 			break;
 
 		case TWI_MOSI_BYTE_ACK:
+			usi_twi_set_usisr(0);
 			sda_in();
 			// first transmitted byte is expected to be the transmit length
 			if((0 == twi_rx_buffer_index) || (twi_rx_buffer_index < twi_rx_buffer[0]+1)) {
-				usi_twi_set_usisr(0);
 				twi_state = TWI_MOSI_BYTE;
 			} else {
-#ifdef USI_TWI_DEBUG
-				PORTB |= (1<<USI_TWI_PIN_DBG1);
-				PORTB &= ~(1<<USI_TWI_PIN_DBG1);
-#endif
 				usi_twi_rx_complete_callback(twi_rx_buffer+1, twi_rx_buffer[0]);
 				USICR &= ~(1<<USIOIE);
 				USISR |= (1<<USIOIF);
 				twi_state = TWI_IDLE;
 			}
-#ifdef USI_TWI_DEBUG
-			PORTB |= (1<<USI_TWI_PIN_DBG1);
-			PORTB &= ~(1<<USI_TWI_PIN_DBG1);
-#endif
 			break;
 
 	}
 
 #ifdef USI_TWI_DEBUG
-	PORTB &= ~(1<<USI_TWI_PIN_DBG2);
+	PORTB &= ~(1<<USI_TWI_PIN_DBG1);
 #endif
 }
 

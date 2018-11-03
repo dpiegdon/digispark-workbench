@@ -15,6 +15,7 @@
  *  - Excessive bytes are ignored and not acknowledged.
  *  - Expected callback definition:
  *    void usi_twi_rx_complete_callback(const uint8_t * buffer, const uint8_t length);
+ *  - Uses TIM0 timer for timeout detection.
  *    Where buffer and length exclude the length-defining first byte.
  *  - Callback will be executed in interrupt context.
  *
@@ -25,7 +26,7 @@
  *  - usitwislave.c by Erik Slagter
  */
 
-//#define USI_TWI_DEBUG
+#define USI_TWI_DEBUG
 #ifdef USI_TWI_DEBUG
 // Pins that can be used to analyse TWI data stream parsing.
 # define USI_TWI_PIN_DBG1 PB3
@@ -40,6 +41,20 @@
 #define USI_TWI_PIN_SCK PB2
 #define USI_TWI_PIN_SDA PB0
 
+/* set this to make all ISRs naked. i.e. the ISR won't care about changing
+ * registers. that only works if your main-loop code does not use any
+ * registers once interrupts are enabled - so if your code looks like this:
+ *
+ *  sei()
+ *  while(1) {
+ *    // do NOTHING at all in main loop
+ *  }
+ *
+ *  this is usefull if the logic of your device is TWI-driven.
+ *  then this setting can help you make your ISRs faster,
+ *  working with higher TWI clock speeds.
+ */
+//#define USR_TWI_NAKED_ISR
 
 void usi_twi_init(void);
 
