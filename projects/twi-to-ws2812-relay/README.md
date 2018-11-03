@@ -31,6 +31,8 @@ be used. The LEDs should be connected to `PB1`, but that may be changed in
 The TWI address of the ATTiny can be configured in `usi_twi.h`. It currently
 defaults to 0x3c.
 
+TWI clock speed has to be between 50 KHz and 280 KHz.
+
 Authors
 -------
 

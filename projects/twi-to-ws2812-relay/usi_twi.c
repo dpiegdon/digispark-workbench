@@ -9,8 +9,10 @@
 
 #ifdef USR_TWI_NAKED_ISR
 # define USI_TWI_ISR_OPTS ISR_NAKED
+# define USI_TWI_ISR_RET(...) __asm__ __volatile__("reti")
 #else
 # define USI_TWI_ISR_OPTS
+# define USI_TWI_ISR_RET(...)
 #endif
 
 enum TwiStates {
@@ -100,6 +102,8 @@ ISR(TIMER0_COMPA_vect, USI_TWI_ISR_OPTS)
 	sda_in();
 	USICR &= ~(1<<USIOIE);
 	twi_state = TWI_IDLE;
+
+	USI_TWI_ISR_RET();
 }
 
 void usi_twi_init(void)
@@ -165,6 +169,8 @@ ISR(USI_START_vect, USI_TWI_ISR_OPTS)
 #ifdef USI_TWI_DEBUG
 	PORTB &= ~(1<<USI_TWI_PIN_DBG1);
 #endif
+
+	USI_TWI_ISR_RET();
 }
 
 ISR(USI_OVF_vect, USI_TWI_ISR_OPTS)
@@ -257,5 +263,7 @@ ISR(USI_OVF_vect, USI_TWI_ISR_OPTS)
 #ifdef USI_TWI_DEBUG
 	PORTB &= ~(1<<USI_TWI_PIN_DBG1);
 #endif
+
+	USI_TWI_ISR_RET();
 }
 
