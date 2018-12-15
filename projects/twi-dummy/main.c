@@ -10,6 +10,9 @@ int main(void)
 	// power off all peripheral. all enabled on demand.
 	PRR = (1<<PRTIM1) | (1<<PRTIM0) | (1<<PRUSI) | (1<<PRADC);
 
+	// disable brown-out
+	
+
 	usi_twi_init();
 
 	sei();

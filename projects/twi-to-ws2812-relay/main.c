@@ -11,6 +11,12 @@ int main(void)
 	// power off all peripheral. all enabled on demand.
 	PRR = (1<<PRTIM1) | (1<<PRTIM0) | (1<<PRUSI) | (1<<PRADC);
 
+	// clock source is internal 64MHz PLL, divided by 4 => 16MHz input.
+	// (CKSEL=1, CLKPR=0)
+	// Divide down to 8MHz (/2), so we can safely run at 3.3MHz.
+	CLKPR = (1<<CLKPCE);
+	CLKPR = (1<<CLKPS0);
+
 	usi_twi_init();
 	ws2812_init();
 
