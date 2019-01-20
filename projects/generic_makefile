@@ -18,7 +18,7 @@ OBJDUMP := $(CROSSCOMPILE)objdump
 READELF := $(CROSSCOMPILE)readelf
 SIZE := $(CROSSCOMPILE)size
 
-CLOCK := 12000000
+CLOCK := 16000000
 DEVICE := attiny85
 UPLOAD := ../../micronucleus/commandline/micronucleus --run
 
