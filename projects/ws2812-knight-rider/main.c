@@ -55,7 +55,7 @@ int main(void)
 
 		// set lights
 		for(i=0; i < light_count; ++i)
-			ws2812_set_single(brightness[i], 0, 0);
+			ws2812_set_single(brightness[i], 0, brightness[i]);
 
 		// wait a bit
 		_delay_ms(1000/light_count/2);
