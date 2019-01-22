@@ -6,11 +6,6 @@
 
 #include "ws2812.h"
 
-static inline void delay(void)
-{
-	__asm__ __volatile__("nop");
-}
-
 static inline uint8_t attenuate(uint8_t value)
 {
 	uint16_t v = value;
