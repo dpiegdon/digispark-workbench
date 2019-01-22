@@ -1,1 +1,1 @@
-../twi-to-ws2812-relay/ws2812.h
+../shared/ws2812.h
