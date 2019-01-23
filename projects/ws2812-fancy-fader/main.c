@@ -59,9 +59,9 @@ int main(void)
 		for(i = 0; i < light_count-3; ++i)
 			brightness[i] = brightness[i+3];
 
-		brightness[light_count-1] = gammasight(((lfsr >> 15) & 0x1f) << 3);
-		brightness[light_count-2] = gammasight(((lfsr >> 10) & 0x1f) << 3);
-		brightness[light_count-3] = gammasight(((lfsr >>  5) & 0x1f) << 3);
+		brightness[light_count-1] = gammasight(((lfsr >> 10) & 0x1f) << 3);
+		brightness[light_count-2] = gammasight(((lfsr >>  5) & 0x1f) << 3);
+		brightness[light_count-3] = gammasight(((lfsr >>  0) & 0x1f) << 3);
 
 		// set lights
 		for(i=0; i < light_count; i+=3) {
