@@ -4,13 +4,17 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 
+#include <string.h>
+
 #include "ws2812.h"
 
+// generate next value from linear feedback shift register
 uint16_t lfsr_fibonacci(uint16_t value)
 {
 	return (value >> 1) | ((value >> 0) ^ (value >> 2) ^ (value >> 3) ^ (value >> 5)) << 15;
 }
 
+// setup ADC for continuous internal temperature measurement
 void temp_init(void)
 {
 	ADMUX   = (0 << REFS2)
@@ -29,6 +33,7 @@ void temp_init(void)
 		| (1 << ADEN);		// enable ADC block
 }
 
+// do a tiny bit of gamma correction do color differences get more intensive
 uint8_t gammasight(uint8_t in)
 {
 	uint16_t v = in;
@@ -45,36 +50,36 @@ int main(void)
 	uint8_t brightness[light_count];
 	uint16_t lfsr = 0xbeef;
 
-	// power off unneeded peripheral.
+	// power off unneeded peripheral
 	PRR = (1<<PRTIM1) | (1<<PRTIM0) | (1<<PRUSI);
 
 	ws2812_init();
 	temp_init();
 
 	// start with lights off
-	for(i=0; i < light_count; ++i)
-		brightness[i] = 0;
+	memset(brightness, 0, sizeof(brightness));
 
 	while(1) {
+		// shift color stream
 		for(i = 0; i < light_count-3; ++i)
 			brightness[i] = brightness[i+3];
 
-		brightness[light_count-1] = gammasight(((lfsr >> 10) & 0x1f) << 3);
-		brightness[light_count-2] = gammasight(((lfsr >>  5) & 0x1f) << 3);
-		brightness[light_count-3] = gammasight(((lfsr >>  0) & 0x1f) << 3);
+		// assign new color to free slot
+		brightness[light_count - 3] = gammasight(((lfsr >>  0) & 0x1f) << 3);
+		brightness[light_count - 2] = gammasight(((lfsr >>  5) & 0x1f) << 3);
+		brightness[light_count - 1] = gammasight(((lfsr >> 10) & 0x1f) << 3);
 
-		// set lights
-		for(i=0; i < light_count; i+=3) {
+		// set lights to their color
+		for(i=0; i < light_count; i += 3)
 			ws2812_set_single(brightness[i], brightness[i+1], brightness[i+2]);
-		}
 
-		// wait a bit
+		// wait a bit and seed LFSR
 		_delay_ms(300/light_count*3);
-		lfsr = lfsr_fibonacci((ADC << 15) ^ lfsr);
+		lfsr = lfsr_fibonacci(lfsr ^ (ADC << 15));
 		_delay_ms(300/light_count*3);
-		lfsr = lfsr_fibonacci((ADC << 15) ^ lfsr);
+		lfsr = lfsr_fibonacci(lfsr ^ (ADC << 15));
 		_delay_ms(300/light_count*3);
-		lfsr = lfsr_fibonacci((ADC << 15) ^ lfsr);
+		lfsr = lfsr_fibonacci(lfsr ^ (ADC << 15));
 	}
 }
 
