@@ -45,40 +45,66 @@ int main(void)
 {
 	uint8_t i;
 
-	const uint8_t light_count = 90;
+	const uint8_t led_count = 3*40;
 
-	uint8_t brightness[light_count];
+	uint8_t tail[led_count];
+	uint8_t front_previous[3];
+	uint8_t front_next[3];
+	const uint8_t front_interpol_max_steps = 31; // (zero => no interpolation)
+	uint8_t front_interpol_step = 0;
+
 	uint16_t lfsr = 0xbeef;
 
 	// power off unneeded peripheral
 	PRR = (1<<PRTIM1) | (1<<PRTIM0) | (1<<PRUSI);
 
+	// start with lights off
+	memset(tail, 0, sizeof(tail));
+	memset(front_previous, 0, sizeof(front_previous));
+	memset(front_next, 0, sizeof(front_next));
+
 	ws2812_init();
 	temp_init();
 
-	// start with lights off
-	memset(brightness, 0, sizeof(brightness));
-
 	while(1) {
 		// shift color stream
-		for(i = 0; i < light_count-3; ++i)
-			brightness[i] = brightness[i+3];
+		for(i = led_count-1; i >= 3; --i)
+			tail[i] = tail[i-3];
 
-		// assign new color to free slot
-		brightness[light_count - 3] = gammasight(((lfsr >>  0) & 0x1f) << 3);
-		brightness[light_count - 2] = gammasight(((lfsr >>  5) & 0x1f) << 3);
-		brightness[light_count - 1] = gammasight(((lfsr >> 10) & 0x1f) << 3);
+		// assign color to free slot
+		if(front_interpol_step >= front_interpol_max_steps) {
+			front_previous[0] = front_next[0];
+			front_next[0] = gammasight(((lfsr >>  0) & 0x1f) << 3);
+			front_previous[1] = front_next[1];
+			front_next[1] = gammasight(((lfsr >>  5) & 0x1f) << 3);
+			front_previous[2] = front_next[2];
+			front_next[2] = gammasight(((lfsr >> 10) & 0x1f) << 3);
+			front_interpol_step = 0;
+		} else {
+			front_interpol_step += 1;
+		}
+
+		uint16_t r, g, b;
+		r = ((uint16_t)front_previous[0]) * (front_interpol_max_steps+1-front_interpol_step);
+		r += ((uint16_t)front_next[0]) * front_interpol_step;
+		r /= front_interpol_max_steps + 1;
+		g = ((uint16_t)front_previous[1]) * (front_interpol_max_steps+1-front_interpol_step);
+		g += ((uint16_t)front_next[1]) * front_interpol_step;
+		g /= front_interpol_max_steps + 1;
+		b = ((uint16_t)front_previous[2]) * (front_interpol_max_steps+1-front_interpol_step);
+		b += ((uint16_t)front_next[2]) * front_interpol_step;
+		b /= front_interpol_max_steps + 1;
+
+		tail[0] = r;
+		tail[1] = g;
+		tail[2] = b;
 
 		// set lights to their color
-		for(i=0; i < light_count; i += 3)
-			ws2812_set_single(brightness[i], brightness[i+1], brightness[i+2]);
+		for(i=0; i < led_count; ++i)
+			ws2812_send_single_byte(tail[i]);
 
 		// wait a bit and seed LFSR
-		_delay_ms(300/light_count*3);
-		lfsr = lfsr_fibonacci(lfsr ^ (ADC << 15));
-		_delay_ms(300/light_count*3);
-		lfsr = lfsr_fibonacci(lfsr ^ (ADC << 15));
-		_delay_ms(300/light_count*3);
+		_delay_ms(1000/(led_count/3));
 		lfsr = lfsr_fibonacci(lfsr ^ (ADC << 15));
 	}
 }
