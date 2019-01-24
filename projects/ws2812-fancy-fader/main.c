@@ -103,8 +103,10 @@ int main(void)
 			ws2812_send_single_byte(tail[led_index]);
 
 		// wait a bit and seed LFSR
-		_delay_ms(1000/(led_count/3));
-		lfsr = lfsr_fibonacci(lfsr ^ (ADC << 15));
+		for(uint8_t i = 0; i < 6; ++i) {
+			_delay_ms(1000/(led_count/3));
+			lfsr = lfsr_fibonacci(lfsr ^ (ADC << 15));
+		}
 	}
 }
 
