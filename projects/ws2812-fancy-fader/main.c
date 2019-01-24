@@ -9,13 +9,13 @@
 #include "ws2812.h"
 
 // generate next value from linear feedback shift register
-uint16_t lfsr_fibonacci(uint16_t value)
+static inline uint16_t lfsr_fibonacci(uint16_t value)
 {
 	return (value >> 1) | ((value >> 0) ^ (value >> 2) ^ (value >> 3) ^ (value >> 5)) << 15;
 }
 
 // setup ADC for continuous internal temperature measurement
-void temp_init(void)
+static inline void temp_init(void)
 {
 	ADMUX   = (0 << REFS2)
 		| (1 << REFS1)
@@ -34,18 +34,28 @@ void temp_init(void)
 }
 
 // do a tiny bit of gamma correction do color differences get more intensive
-uint8_t gammasight(uint8_t in)
+static inline uint8_t gammasight(uint8_t in)
 {
 	uint16_t v = in;
 	v = (v*v) >> 8;
 	return v;
 }
 
+static inline uint8_t interpolate(uint8_t prev, uint8_t next, uint8_t step, uint8_t max_steps)
+{
+	uint16_t v;
+
+	v = ((uint16_t)prev) * (max_steps+1-step);
+	v += ((uint16_t)next) * step;
+	v /= max_steps + 1;
+
+	return v;
+}
+
 int main(void)
 {
-	uint8_t i;
-
-	const uint8_t led_count = 3*40;
+	const uint16_t led_count = 3 * 150;
+	uint16_t led_index;
 
 	uint8_t tail[led_count];
 	uint8_t front_previous[3];
@@ -68,40 +78,29 @@ int main(void)
 
 	while(1) {
 		// shift color stream
-		for(i = led_count-1; i >= 3; --i)
-			tail[i] = tail[i-3];
+		for(led_index = led_count-1; led_index >= 3; --led_index)
+			tail[led_index] = tail[led_index-3];
 
 		// assign color to free slot
 		if(front_interpol_step >= front_interpol_max_steps) {
-			front_previous[0] = front_next[0];
-			front_next[0] = gammasight(((lfsr >>  0) & 0x1f) << 3);
-			front_previous[1] = front_next[1];
-			front_next[1] = gammasight(((lfsr >>  5) & 0x1f) << 3);
-			front_previous[2] = front_next[2];
-			front_next[2] = gammasight(((lfsr >> 10) & 0x1f) << 3);
 			front_interpol_step = 0;
+			front_previous[0] = front_next[0];
+			front_previous[1] = front_next[1];
+			front_previous[2] = front_next[2];
+			front_next[0] = gammasight(((lfsr >>  0) & 0x1f) << 3);
+			front_next[1] = gammasight(((lfsr >>  5) & 0x1f) << 3);
+			front_next[2] = gammasight(((lfsr >> 10) & 0x1f) << 3);
 		} else {
 			front_interpol_step += 1;
 		}
 
-		uint16_t r, g, b;
-		r = ((uint16_t)front_previous[0]) * (front_interpol_max_steps+1-front_interpol_step);
-		r += ((uint16_t)front_next[0]) * front_interpol_step;
-		r /= front_interpol_max_steps + 1;
-		g = ((uint16_t)front_previous[1]) * (front_interpol_max_steps+1-front_interpol_step);
-		g += ((uint16_t)front_next[1]) * front_interpol_step;
-		g /= front_interpol_max_steps + 1;
-		b = ((uint16_t)front_previous[2]) * (front_interpol_max_steps+1-front_interpol_step);
-		b += ((uint16_t)front_next[2]) * front_interpol_step;
-		b /= front_interpol_max_steps + 1;
-
-		tail[0] = r;
-		tail[1] = g;
-		tail[2] = b;
+		tail[0] = interpolate(front_previous[0], front_next[0], front_interpol_step, front_interpol_max_steps);
+		tail[1] = interpolate(front_previous[1], front_next[1], front_interpol_step, front_interpol_max_steps);
+		tail[2] = interpolate(front_previous[2], front_next[2], front_interpol_step, front_interpol_max_steps);
 
 		// set lights to their color
-		for(i=0; i < led_count; ++i)
-			ws2812_send_single_byte(tail[i]);
+		for(led_index=0; led_index < led_count; ++led_index)
+			ws2812_send_single_byte(tail[led_index]);
 
 		// wait a bit and seed LFSR
 		_delay_ms(1000/(led_count/3));
