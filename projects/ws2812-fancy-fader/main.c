@@ -25,7 +25,7 @@ static inline void temp_init(void)
 		| (1 << MUX1)
 		| (1 << MUX0);		// mux ADC4, temp-sensor
 
-	ADCSRA  = (0 << ADPS2)
+	ADCSRA  = (1 << ADPS2)
 		| (0 << ADPS1)
 		| (0 << ADPS0)		// prescaler /16
 		| (1 << ADATE)		// continuous conversion
