@@ -1,37 +1,21 @@
 <!-- vim: fo=a tw=80 colorcolumn=80 syntax=markdown :
 -->
 
-ATTiny85-based TWI-to-WS2812 translator
-=======================================
+ATTiny85-based WS2812 fader light
+=================================
 
-WS2812 LED strips have a timing-critical protocol. If you have an application
-that is real-time and you can't spare the cycles, this firmware and an ATTiny85
-will help you relax the timings.
+WS2812 LED strip displays random colors interpolated and scrolled. Fancy party-
+or mood light.
 
-You can simply push the data stream via TWI to the ATTiny85, e.g. using DMA.
-Once completed, the ATTiny85 will then take care to send the buffered data
-stream to the LEDs using the correct timings.
+To scroll slower/faster, change `scroll_delay`.
 
-The TWI transfer must contain a length field at offset 0, that contains the
-lenght of the data coming after the length field. E.g.:
+To interpolate more/less (see less/more different colors), change
+`front_interpol_max_steps` to a different value. Try using a 2^n-1 value to get
+efficient division.
 
-`0x03 0x01 0x02 0x03`
+To use more/less leds, change `led_count`. This must be a multiple of 3, as
+R/G/B of each WS2812 LED all have their own entry.
 
-Currently only 84 LEDs are supported, as the length field is only 8 bit long and
-each LED required 3 bytes of payload (G/R/B).
-
-Expected system clock for the ATTiny is 16 MHz, so `CKSEL` fuses need to be
-programmed to `0001`. If you use a DigiSpark this is already all set for the
-bootloader.
-
-TWI pins have to be `PB2` as `SCK` and `PB0` as `SDA`, so the USI TWI mode can
-be used. The LEDs should be connected to `PB1`, but that may be changed in
-`ws2812.h` .
-
-The TWI address of the ATTiny can be configured in `usi_twi.h`. It currently
-defaults to 0x3c.
-
-TWI clock speed has to be between 50 KHz and 280 KHz.
 
 Authors
 -------

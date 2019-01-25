@@ -54,16 +54,33 @@ static inline uint8_t interpolate(uint8_t prev, uint8_t next, uint8_t step, uint
 
 int main(void)
 {
-	const uint16_t led_count = 3 * 150;
-	uint16_t led_index;
+	/*
+	 * number of LEDs to use, times three (for R/G/B).
+	 * this is the main constraint for this firmware, as the
+	 * attiny85 only has 512 bytes of memory.
+	 * the upper limit it somewhere around 167*3 .
+	 */
+	const uint16_t led_count = 150 * 3;
 
-	uint8_t tail[led_count];
-	uint8_t front_previous[3];
-	uint8_t front_next[3];
-	const uint8_t front_interpol_max_steps = 63; // (zero => no interpolation)
-	uint8_t front_interpol_step = 0;
+	/*
+	 * amount of interpolation between two random colors.
+	 * zero => no interpolation.
+	 * values of 2^n-1 will result in more efficient code,
+	 * as shift instead of division can be used.
+	 */
+	const uint8_t front_interpol_max_steps = 63;
 
-	uint16_t lfsr = 0xbeef;
+	/*
+	 * delay between each scrolling iteration
+	 */
+	const uint8_t scroll_delay = 3;
+
+
+	uint16_t lfsr = 0xbeef; // LFSR is used for random color generation
+	uint8_t front_next[3]; // color we are fading toward
+	uint8_t front_previous[3]; // color we are fading away from
+	uint8_t front_interpol_step = 0; // current step in fading
+	uint8_t tail[led_count]; // buffer for older LED values
 
 	// power off unneeded peripheral
 	PRR = (1<<PRTIM1) | (1<<PRTIM0) | (1<<PRUSI);
@@ -74,15 +91,18 @@ int main(void)
 	memset(front_next, 0, sizeof(front_next));
 
 	ws2812_init();
-	temp_init();
+	temp_init(); // temp sensor LSB is used for LFSR seeding
 
 	while(1) {
-		// shift color stream
+		uint16_t led_index;
+
+		// shift color stream and create free slot
 		for(led_index = led_count-1; led_index >= 3; --led_index)
 			tail[led_index] = tail[led_index-3];
 
 		// assign color to free slot
 		if(front_interpol_step >= front_interpol_max_steps) {
+			// fading done, get a new random color
 			front_interpol_step = 0;
 			front_previous[0] = front_next[0];
 			front_previous[1] = front_next[1];
@@ -91,9 +111,9 @@ int main(void)
 			front_next[1] = gammasight(((lfsr >>  5) & 0x1f) << 3);
 			front_next[2] = gammasight(((lfsr >> 10) & 0x1f) << 3);
 		} else {
+			// next fading step
 			front_interpol_step += 1;
 		}
-
 		tail[0] = interpolate(front_previous[0], front_next[0], front_interpol_step, front_interpol_max_steps);
 		tail[1] = interpolate(front_previous[1], front_next[1], front_interpol_step, front_interpol_max_steps);
 		tail[2] = interpolate(front_previous[2], front_next[2], front_interpol_step, front_interpol_max_steps);
@@ -103,7 +123,7 @@ int main(void)
 			ws2812_send_single_byte(tail[led_index]);
 
 		// wait a bit and seed LFSR
-		for(uint8_t i = 0; i < 3; ++i) {
+		for(uint8_t i = 0; i < scroll_delay; ++i) {
 			_delay_ms(1000/(led_count/3));
 			lfsr = lfsr_fibonacci(lfsr ^ (ADC << 15));
 		}
