@@ -76,6 +76,13 @@ int main(void)
 	 */
 	const uint8_t scroll_delay = 5;
 
+	/*
+	 * maximum brightness value for LEDs.
+	 * bitmask that should be between 0x1f (rather bright)
+	 * and 0x04 (very dark).
+	 */
+	const uint8_t brightness_mask=0x0f;
+
 
 	uint16_t lfsr = 0xbeef; // LFSR is used for random color generation
 	uint8_t front_next[3]; // color we are fading toward
@@ -108,9 +115,9 @@ int main(void)
 			front_previous[0] = front_next[0];
 			front_previous[1] = front_next[1];
 			front_previous[2] = front_next[2];
-			front_next[0] = gammasight(((lfsr >>  0) & 0x1f) << 3);
-			front_next[1] = gammasight(((lfsr >>  5) & 0x1f) << 3);
-			front_next[2] = gammasight(((lfsr >> 10) & 0x1f) << 3);
+			front_next[0] = gammasight(((lfsr >>  0) & brightness_mask) << 3);
+			front_next[1] = gammasight(((lfsr >>  5) & brightness_mask) << 3);
+			front_next[2] = gammasight(((lfsr >> 10) & brightness_mask) << 3);
 		} else {
 			// next fading step
 			front_interpol_step += 1;
