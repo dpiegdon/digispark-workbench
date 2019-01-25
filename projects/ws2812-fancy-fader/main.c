@@ -33,7 +33,7 @@ static inline void temp_init(void)
 		| (1 << ADEN);		// enable ADC block
 }
 
-// do a tiny bit of gamma correction do color differences get more intensive
+// do a tiny bit of "gamma" correction so color differences get more intense
 static inline uint8_t gammasight(uint8_t in)
 {
 	uint16_t v = in;

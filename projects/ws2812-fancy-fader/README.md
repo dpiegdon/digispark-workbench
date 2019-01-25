@@ -5,7 +5,7 @@ ATTiny85-based WS2812 fader light
 =================================
 
 WS2812 LED strip displays random colors interpolated and scrolled. Fancy party-
-or mood light.
+or mood-light.
 
 To scroll slower/faster, change `scroll_delay`.
 
