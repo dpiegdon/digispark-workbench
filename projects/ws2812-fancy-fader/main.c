@@ -60,7 +60,7 @@ int main(void)
 	uint8_t tail[led_count];
 	uint8_t front_previous[3];
 	uint8_t front_next[3];
-	const uint8_t front_interpol_max_steps = 31; // (zero => no interpolation)
+	const uint8_t front_interpol_max_steps = 63; // (zero => no interpolation)
 	uint8_t front_interpol_step = 0;
 
 	uint16_t lfsr = 0xbeef;
@@ -103,7 +103,7 @@ int main(void)
 			ws2812_send_single_byte(tail[led_index]);
 
 		// wait a bit and seed LFSR
-		for(uint8_t i = 0; i < 6; ++i) {
+		for(uint8_t i = 0; i < 3; ++i) {
 			_delay_ms(1000/(led_count/3));
 			lfsr = lfsr_fibonacci(lfsr ^ (ADC << 15));
 		}
