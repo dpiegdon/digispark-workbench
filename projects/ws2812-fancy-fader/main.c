@@ -38,7 +38,7 @@ static inline uint8_t gammasight(uint8_t in)
 {
 	uint16_t v = in;
 	v = (v*v) >> 8;
-	return v;
+	return (uint8_t)v;
 }
 
 static inline uint8_t interpolate(uint8_t prev, uint8_t next, uint8_t step, uint8_t max_steps)
@@ -49,16 +49,17 @@ static inline uint8_t interpolate(uint8_t prev, uint8_t next, uint8_t step, uint
 	v += ((uint16_t)next) * step;
 	v /= max_steps + 1;
 
-	return v;
+	return (uint8_t)v;
 }
 
 int main(void)
 {
 	/*
 	 * number of LEDs to use, times three (for R/G/B).
-	 * this is the main constraint for this firmware, as the
-	 * attiny85 only has 512 bytes of memory.
-	 * the upper limit it somewhere around 167*3 .
+	 * this is the main constraint for this firmware, as the ATTiny85 only
+	 * has 512 bytes of memory. the upper limit is somewhere around 167*3 .
+	 * this might be fixable by dynamically calculating the fading steps
+	 * between colors.
 	 */
 	const uint16_t led_count = 150 * 3;
 
