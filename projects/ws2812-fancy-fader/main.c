@@ -74,7 +74,7 @@ int main(void)
 	/*
 	 * delay between each scrolling iteration
 	 */
-	const uint8_t scroll_delay = 3;
+	const uint8_t scroll_delay = 5;
 
 
 	uint16_t lfsr = 0xbeef; // LFSR is used for random color generation
