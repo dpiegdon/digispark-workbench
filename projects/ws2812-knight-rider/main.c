@@ -9,7 +9,7 @@
 static inline uint8_t attenuate(uint8_t value)
 {
 	uint16_t v = value;
-	v = ((v<<3)-v) >> 3;
+	v = ((v<<2)-v) >> 2;
 	return v;
 }
 
@@ -17,7 +17,7 @@ int main(void)
 {
 	uint8_t i;
 
-	const uint8_t light_count = 32;
+	const uint8_t light_count = 13;
 
 	int8_t center = 0;
 	int8_t direction = 1;
@@ -49,11 +49,14 @@ int main(void)
 		}
 
 		// set lights
-		for(i=0; i < light_count; ++i)
+		for(i=0; i < light_count; ++i) {
 			ws2812_set_single(brightness[i], 0, brightness[i]);
+			ws2812_set_single(brightness[i], 0, brightness[i]);
+			ws2812_set_single(brightness[i], 0, brightness[i]);
+		}
 
 		// wait a bit
-		_delay_ms(1000/light_count/2);
+		_delay_ms(1400/light_count/2);
 	}
 }
 
