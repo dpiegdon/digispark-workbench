@@ -17,7 +17,7 @@ main.o: ws2812.h usi_twi.h
 usi_twi.c: usi_twi.h
 
 readfuses:
-	avrdude ${AVRDUDE_OPTS} -U lfuse:r:fuse_low.hex:h -U hfuse:r:fuse_high.hex:h -U efuse:r:fuse_e:h
+	avrdude ${AVRDUDE_OPTS} -U lfuse:r:fuse_low.hex:h -U hfuse:r:fuse_high.hex:h -U efuse:r:fuse_extended:h
 
 writefuses:
 	avrdude ${AVRDUDE_OPTS} -U lfuse:w:0xf1:m -U hfuse:w:0xdd:m -U efuse:w:0xff:m
