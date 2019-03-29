@@ -24,10 +24,6 @@ Expected system clock for the ATTiny is 16 MHz, so `CKSEL` fuses need to be
 programmed to `0001`. If you use a DigiSpark this is already all set for the
 bootloader.
 
-Optimal fuses likely are set with avrdude via:
-
-    -U lfuse:w:0xf1:m -U hfuse:w:0xdd:m -U efuse:w:0xff:m
-
 TWI pins have to be `PB2` as `SCK` and `PB0` as `SDA`, so the USI TWI mode can
 be used. The LEDs should be connected to `PB1`, but that may be changed in
 `ws2812.h` .
