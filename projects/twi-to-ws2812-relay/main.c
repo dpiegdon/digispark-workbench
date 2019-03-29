@@ -2,6 +2,7 @@
 #include <avr/io.h>
 #include <avr/wdt.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 
 #include "ws2812.h"
 #include "usi_twi.h"
@@ -19,6 +20,34 @@ int main(void)
 
 	usi_twi_init();
 	ws2812_init();
+
+	ws2812_send_single_byte(0xff);
+	ws2812_send_single_byte(0x00);
+	ws2812_send_single_byte(0x00);
+
+	ws2812_send_single_byte(0x00);
+	ws2812_send_single_byte(0xff);
+	ws2812_send_single_byte(0x00);
+
+	ws2812_send_single_byte(0x00);
+	ws2812_send_single_byte(0x00);
+	ws2812_send_single_byte(0xff);
+
+	_delay_ms(250);
+
+	ws2812_send_single_byte(0x00);
+	ws2812_send_single_byte(0x00);
+	ws2812_send_single_byte(0x00);
+
+	ws2812_send_single_byte(0x00);
+	ws2812_send_single_byte(0x00);
+	ws2812_send_single_byte(0x00);
+
+	ws2812_send_single_byte(0x00);
+	ws2812_send_single_byte(0x00);
+	ws2812_send_single_byte(0x00);
+
+	_delay_ms(50);
 
 	sei();
 

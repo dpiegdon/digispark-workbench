@@ -3,6 +3,8 @@ TARGET := main
 OBJECTS := main.o usi_twi.o
 include ../generic_makefile
 
+CLOCK := 8000000
+
 AVRDUDE_OPTS=-p t85 -c stk500v2 -B 40 -P /dev/ttyACM0
 
 .PHONY: readfuses writefuses writeprogram
