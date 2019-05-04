@@ -24,7 +24,7 @@ UPLOAD := ../../micronucleus/commandline/micronucleus --run
 
 STACK_USAGE=-fstack-usage
 CFLAGS += -Iusbdrv -I.
-CFLAGS += -Wall -Werror -Wshadow -pedantic
+CFLAGS += -Wall -Wshadow -pedantic
 CFLAGS += -Os -g -gdwarf-4
 CFLAGS += -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
 CFLAGS += -Wa,-adhlns=$(<:%=%.lst)
